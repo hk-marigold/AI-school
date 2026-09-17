@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="原材料チェッカー">
+  <rect width="512" height="512" rx="112" fill="#e0748c"/>
+  <circle cx="215" cy="205" r="120" fill="#fff7f8"/>
+  <circle cx="215" cy="150" r="24" fill="#d64545"/>
+  <circle cx="215" cy="205" r="24" fill="#d9a406"/>
+  <circle cx="215" cy="260" r="24" fill="#3f9e5a"/>
+  <line x1="300" y1="290" x2="420" y2="410" stroke="#ffffff" stroke-width="48" stroke-linecap="round"/>
+  <circle cx="215" cy="205" r="120" fill="none" stroke="#ffffff" stroke-width="36"/>
+</svg>
