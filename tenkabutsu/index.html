@@ -118,6 +118,19 @@
     <p class="hint">💡 コツ：<b>「原材料名」の部分だけ</b>を画面いっぱいに、明るく・まっすぐ・ピントを合わせて撮ると読み取りやすいです。（小さい字は苦手なので、寄って大きく写すのが大事）読み取った文字は上の欄で直せます。写真は保存されません。</p>
   </div>
 
+  <!-- 高精度読み取り設定 -->
+  <div class="card">
+    <p class="label">⚙️ 高精度読み取り（クラウド）</p>
+    <p class="hint" id="ocrStatus" style="margin-top:0"></p>
+    <input id="apiKey" type="text" autocomplete="off" placeholder="ここに無料のカギ（APIキー）を貼り付け"
+      style="width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fffdfd;margin-top:6px;">
+    <div class="btns" style="margin-top:10px">
+      <button class="go" id="saveKey" style="flex:2;font-size:15px;padding:12px">カギを保存</button>
+      <button class="clear" id="delKey" style="flex:1;padding:12px">消す</button>
+    </div>
+    <p class="hint">🔑 無料のカギの取り方：<a href="https://ocr.space/ocrapi/freekey" target="_blank" rel="noopener" style="color:var(--pink-deep);font-weight:700">こちらのページ</a>でメールアドレスを入れると、カギがメールで届きます。届いたカギ（K…で始まる文字）を上の欄に貼って「カギを保存」。カギはこのスマホの中だけに保存され、写真は文字を読む会社（OCR.space）に送られます。</p>
+  </div>
+
   <!-- 厳しさ -->
   <div class="card">
     <p class="label">② 判定の厳しさを選ぶ</p>
@@ -350,6 +363,19 @@ document.getElementById("seg").addEventListener("click", e=>{
   [...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on", x===b));
   document.getElementById("segDesc").textContent = MODE_DESC[mode];
 });
+/* ===== 高精度読み取り（クラウド）の設定 ===== */
+const KEY_LS = "tenka_ocr_key";
+function getKey(){ try{ return localStorage.getItem(KEY_LS) || ""; }catch(_){ return ""; } }
+function refreshOcrStatus(){
+  const k = getKey();
+  const el = document.getElementById("ocrStatus");
+  if(el) el.innerHTML = k
+    ? '✅ <b style="color:var(--g)">高精度読み取りON</b>（クラウドで正確に読みます）'
+    : '今は「スマホの中だけ」の読み取りです。下でカギを保存すると<b>高精度</b>になります。';
+  const inp = document.getElementById("apiKey"); if(inp && k) inp.value = k;
+}
+function toBlob(canvas, q){ return new Promise(r=>canvas.toBlob(r, "image/jpeg", q)); }
+
 /* ===== 写真から読み取る（OCR）===== */
 function loadImageFromFile(file){
   return new Promise((res,rej)=>{
@@ -359,11 +385,58 @@ function loadImageFromFile(file){
     img.src = URL.createObjectURL(file);
   });
 }
+/* クラウド(OCR.space)で読み取り。1MB以下に縮小して送る */
+async function ocrCloud(file, key){
+  const img = await loadImageFromFile(file);
+  const s = Math.min(1, 1600 / Math.max(1, img.width));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(img.width * s);
+  cv.height = Math.round(img.height * s);
+  cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+  let q = 0.85, blob = await toBlob(cv, q);
+  while(blob && blob.size > 1000000 && q > 0.4){ q -= 0.15; blob = await toBlob(cv, q); }
+  const fd = new FormData();
+  fd.append("apikey", key);
+  fd.append("language", "jpn");
+  fd.append("OCREngine", "1");
+  fd.append("isOverlayRequired", "false");
+  fd.append("scale", "true");
+  fd.append("file", blob, "label.jpg");
+  const r = await fetch("https://api.ocr.space/parse/image", { method:"POST", body: fd });
+  const j = await r.json();
+  if(j.IsErroredOnProcessing){
+    throw new Error(Array.isArray(j.ErrorMessage) ? j.ErrorMessage.join(" ") : (j.ErrorMessage || "読み取りエラー"));
+  }
+  return (j.ParsedResults && j.ParsedResults[0]) ? j.ParsedResults[0].ParsedText : "";
+}
 async function runOCR(file){
   if(!file) return;
   const prog = document.getElementById("ocrProg");
   prog.style.display = "block";
-  prog.textContent = "写真を読み取る準備をしています…（初回は少し時間がかかります）";
+
+  // カギがあれば高精度クラウドで読む
+  const key = getKey();
+  if(key){
+    prog.textContent = "高精度で読み取り中…（クラウド）";
+    try{
+      let t = await ocrCloud(file, key);
+      t = t.replace(/[ \t　]/g,"").replace(/\n{2,}/g,"\n").trim();
+      if(t){
+        document.getElementById("input").value = t;
+        prog.textContent = "✅ 読み取りました（高精度）。文字がずれていたら上の欄で直せます。";
+        check();
+      }else{
+        prog.textContent = "⚠️ 文字が見つかりませんでした。原材料名の部分を大きく写して、もう一度お試しください。";
+      }
+      return;
+    }catch(e){
+      prog.textContent = "⚠️ クラウド読み取りに失敗（" + e.message + "）。スマホ内蔵の読み取りで試します…";
+      // 下のスマホ内蔵の読み取りへ続く
+    }
+  }else{
+    prog.textContent = "写真を読み取る準備をしています…（初回は少し時間がかかります）";
+  }
+
   if(typeof Tesseract === "undefined"){
     prog.textContent = "⚠️ 読み取り部品を読み込めませんでした。ネットにつながっているか確認して、もう一度お試しください。";
     return;
@@ -412,6 +485,21 @@ async function runOCR(file){
 }
 document.getElementById("camIn").addEventListener("change", e=> runOCR(e.target.files[0]));
 document.getElementById("fileIn").addEventListener("change", e=> runOCR(e.target.files[0]));
+
+// カギの保存・削除
+document.getElementById("saveKey").addEventListener("click", ()=>{
+  const v = document.getElementById("apiKey").value.trim();
+  if(!v){ alert("カギ（APIキー）を貼り付けてください。"); return; }
+  try{ localStorage.setItem(KEY_LS, v); }catch(_){}
+  refreshOcrStatus();
+  alert("カギを保存しました。これから写真は高精度で読み取ります😊");
+});
+document.getElementById("delKey").addEventListener("click", ()=>{
+  try{ localStorage.removeItem(KEY_LS); }catch(_){}
+  document.getElementById("apiKey").value = "";
+  refreshOcrStatus();
+});
+refreshOcrStatus();
 
 document.getElementById("go").addEventListener("click", check);
 document.getElementById("clear").addEventListener("click", ()=>{
