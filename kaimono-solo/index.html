@@ -1,0 +1,527 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>かいものリスト（個人）</title>
+
+<!-- ホーム画面に追加（アプリ化）用の設定 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4aa3d4">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="かいもの">
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #efe7d6;
+    --accA: #4aa3d4;
+    --accB: #3fbf8f;
+    --card: rgba(255,255,255,.82);
+    --ink: #37454f;
+    --sub: #9a8f78;
+    --line: rgba(120,150,165,.18);
+    --paper: #fffdf5;
+    --rule: #c9dcea;
+    --danger: #e8735f;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Segoe UI", sans-serif;
+    background: var(--bg);
+    background-attachment: fixed;
+    color: var(--ink);
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { max-width: 640px; margin: 0 auto; padding: 22px 18px 150px; min-height: 100vh; }
+
+  /* ヘッダー */
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .brand .en { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: #9fc4d6; font-weight: 700; }
+  .title {
+    font-size: 28px; font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accA), var(--accB));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-top: 2px;
+  }
+  .solobadge { background: rgba(63,191,143,.12); border: 1px solid rgba(63,191,143,.4); color: #2e9e6e; border-radius: 999px; padding: 8px 12px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+
+  /* かいもの／ストック 切り替え */
+  .viewtoggle { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px; margin-bottom: 14px; box-shadow: 0 6px 16px rgba(90,140,160,.10); }
+  .vt { flex: 1; border: none; background: transparent; border-radius: 999px; padding: 11px 8px; font-size: 15px; font-weight: 800; color: var(--sub); cursor: pointer; font-family: inherit; transition: .15s; }
+  .vt.on { background: linear-gradient(90deg, var(--accA), var(--accB)); color: #fff; box-shadow: 0 6px 14px rgba(70,160,150,.28); }
+
+  /* 種類｜品名｜前回購入日 の列レイアウト（買い物リスト・ストック共通） */
+  .stock-head, .item.stock, .item.shop { grid-template-columns: 34px 58px 1fr 50px 22px; gap: 6px; }
+  .stock-head { display: grid; padding: 2px 12px 8px; font-size: 11px; font-weight: 800; color: var(--sub); }
+  .stock-head span:nth-child(4) { text-align: right; }
+  .item.stock, .item.shop { display: grid; align-items: center; padding: 8px 12px; }
+  .stt { border: none; border-radius: 50%; width: 34px; height: 34px; padding: 0; font-size: 17px; cursor: pointer; font-family: inherit; display: grid; place-items: center; }
+  .item.s-ok  .stt { background: rgba(63,191,143,.16); }
+  .item.s-low .stt { background: rgba(240,180,60,.22); }
+  .item.s-out .stt { background: rgba(232,115,95,.20); }
+  .col-cat { font-size: 12px; font-weight: 700; color: var(--accA); cursor: pointer; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .col-name { min-width: 0; }
+  .col-name .name { font-size: 15px; }
+  .item.s-out .col-name .name { color: #d0432c; }
+  .col-date { font-size: 12px; font-weight: 700; color: var(--sub); text-align: right; line-height: 1.2; white-space: nowrap; }
+  .col-date .nodate { color: #c8d2d8; }
+
+  /* カテゴリタブ */
+  .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; margin-bottom: 4px; }
+  .tab {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--card);
+    border-radius: 999px; padding: 9px 16px; font-size: 14px; font-weight: 700; color: var(--sub);
+    cursor: pointer; transition: .15s;
+  }
+  .tab.on { background: linear-gradient(90deg, var(--accA), var(--accB)); color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(70,160,150,.28); }
+
+  /* リスト（ノート風） */
+  .list {
+    display: flex; flex-direction: column; gap: 0; margin-top: 4px;
+    background: var(--paper);
+    border: 1px solid rgba(150,140,110,.28);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(120,110,70,.14);
+    overflow: hidden;
+  }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    background: transparent; border: none; border-radius: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 16px;
+    box-shadow: none;
+    animation: pop .28s ease;
+  }
+  .item:last-child { border-bottom: none; }
+  @keyframes pop { 0% { transform: translateY(8px) scale(.98); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  .check {
+    width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%;
+    border: 2px solid #cfe0e8; display: grid; place-items: center;
+    cursor: pointer; font-size: 16px; color: transparent; transition: .15s;
+  }
+  .item.done .check { background: var(--accB); border-color: var(--accB); color: #fff; }
+  .item.done .name { color: #b8c6cd; text-decoration: line-through; }
+  .name { font-size: 17px; font-weight: 700; line-height: 1.3; word-break: break-word; }
+  .edit-input { width: 100%; font-size: 15px; font-weight: 700; border: none; border-bottom: 2px solid var(--accA); outline: none; background: transparent; color: var(--ink); font-family: inherit; padding: 1px 0 3px; }
+  .del { flex: 0 0 auto; border: none; background: transparent; color: #cdd8de; font-size: 20px; cursor: pointer; padding: 4px 6px; }
+  .del:active { color: var(--danger); }
+
+  .empty { text-align: center; color: var(--sub); padding: 60px 20px; font-size: 15px; line-height: 1.9; background: var(--paper); border: 1px solid rgba(150,140,110,.28); border-radius: 10px; box-shadow: 0 8px 20px rgba(120,110,70,.14); }
+  .empty .big { font-size: 44px; margin-bottom: 8px; }
+
+  .section-label { font-size: 13px; font-weight: 800; color: var(--sub); margin: 22px 4px 8px; letter-spacing: 1px; }
+  .clear-done { display: block; margin: 18px auto 0; background: transparent; border: 1px solid var(--line); color: var(--sub); border-radius: 999px; padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+  /* 下の入力バー */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,.86); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .dock-inner { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  .field { flex: 1; display: flex; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 4px 6px 4px 14px; }
+  .field input {
+    flex: 1; border: none; outline: none; font-size: 16px; padding: 12px 4px; background: transparent; color: var(--ink);
+    font-family: inherit;
+  }
+  .add-btn { border: none; background: linear-gradient(90deg, var(--accA), var(--accB)); color: #fff; font-size: 18px; font-weight: 800; border-radius: 12px; width: 46px; height: 44px; cursor: pointer; }
+  .mic {
+    flex: 0 0 auto; width: 58px; height: 58px; border-radius: 50%;
+    border: none; background: linear-gradient(135deg, var(--accA), var(--accB));
+    color: #fff; font-size: 26px; cursor: pointer;
+    box-shadow: 0 10px 24px rgba(70,160,180,.35);
+    display: grid; place-items: center; transition: .15s;
+  }
+  .mic:active { transform: scale(.94); }
+  .mic.rec { animation: pulse 1.1s infinite; background: linear-gradient(135deg, #ff8a65, #e8735f); }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(232,115,95,.5); } 50% { box-shadow: 0 0 0 14px rgba(232,115,95,0); } }
+  .hint { text-align: center; font-size: 12px; color: var(--sub); margin-top: 8px; min-height: 16px; }
+</style>
+
+<div id="app">
+  <div class="top">
+    <div class="brand">
+      <div class="en">MY LIST</div>
+      <div class="title">かいものリスト</div>
+    </div>
+    <div class="solobadge">📱 この端末だけ</div>
+  </div>
+
+  <div class="viewtoggle">
+    <button class="vt on" data-v="shop">🛒 かいもの</button>
+    <button class="vt" data-v="stock">📦 ストック</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div id="listArea"></div>
+
+  <div class="dock">
+    <div class="dock-inner">
+      <button class="mic" id="mic" title="声で追加">🎤</button>
+      <div class="field">
+        <input id="text" placeholder="牛乳、洗剤 など…" autocomplete="off">
+        <button class="add-btn" id="add">＋</button>
+      </div>
+    </div>
+    <div class="hint" id="hint">🎤ボタンを押して、ほしいものを話してね</div>
+  </div>
+</div>
+
+<script>
+  // ===== この端末だけ版：データは localStorage（専用キー）に保存。共有なし =====
+  const KEY_ITEMS = "kaimonoSolo_items";
+  const KEY_STOCK = "kaimonoSolo_stock";
+
+  // ===== カテゴリ定義 =====
+  const CATS = [
+    { id: "all",   label: "すべて", emoji: "🧺" },
+    { id: "food",  label: "食品",   emoji: "🍎" },
+    { id: "daily", label: "消耗品", emoji: "🧻" },
+    { id: "other", label: "お菓子・嗜好品", emoji: "🍫" },
+  ];
+  // 音声・入力からカテゴリを推測するためのキーワード（other=お菓子・嗜好品を優先判定）
+  const GUESS = {
+    other: ["チョコ","チョコレート","お菓子","菓子","スナック","ポテチ","ポテトチップ","アイス","ガム","クッキー","ビスケット","せんべい","煎餅","ケーキ","プリン","キャンディ","あめ","飴","グミ","ビール","発泡酒","チューハイ","ワイン","日本酒","焼酎","ウイスキー","お酒","おつまみ","つまみ"],
+    daily: ["洗剤","トイレット","ティッシュ","シャンプー","リンス","石鹸","せっけん","歯磨き","歯ブラシ","ラップ","ゴミ袋","ごみ袋","電池","マスク","おむつ","生理","柔軟剤","スポンジ","掃除","キッチンペーパー"],
+    food:  ["牛乳","たまご","卵","肉","魚","野菜","米","パン","豆腐","納豆","バター","チーズ","ヨーグルト","果物","りんご","バナナ","調味料","醤油","味噌","砂糖","塩","油","小麦粉","冷凍","飲","茶","コーヒー","ジュース","水"],
+  };
+
+  const state = {
+    items: JSON.parse(localStorage.getItem(KEY_ITEMS) || "[]"),
+    stock: JSON.parse(localStorage.getItem(KEY_STOCK) || "[]"),
+    view: "shop",      // "shop"（かいもの）/ "stock"（ストック）
+    filter: "all",
+    editing: null,
+  };
+
+  // ストックの残量ステータス（タップで ok→low→out→ok）
+  const STATUS = {
+    ok:  { emoji: "🟢", label: "十分ある", next: "low" },
+    low: { emoji: "🟡", label: "そろそろ", next: "out" },
+    out: { emoji: "🔴", label: "ない",     next: "ok"  },
+  };
+
+  const $ = (s) => document.querySelector(s);
+
+  function genId() { return Date.now() + "_" + Math.random().toString(36).slice(2, 6); }
+
+  function save() {
+    localStorage.setItem(KEY_ITEMS, JSON.stringify(state.items));
+    localStorage.setItem(KEY_STOCK, JSON.stringify(state.stock));
+  }
+
+  function guessCat(name) {
+    for (const k of GUESS.other) if (name.includes(k)) return "other";
+    for (const k of GUESS.daily) if (name.includes(k)) return "daily";
+    for (const k of GUESS.food)  if (name.includes(k)) return "food";
+    return null;
+  }
+
+  function catInfo(id) { return CATS.find((c) => c.id === id) || CATS[3]; }
+
+  // 日付の表示（前回買った日）
+  function fmtDate(ts) { const d = new Date(ts); return (d.getMonth() + 1) + "/" + d.getDate(); }
+  function dayStart(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  // 予測「あと何日でなくなるか」。小さいほど早く切れる＝上に表示。
+  function predLeft(i) {
+    if (i.status === "out") return -1e9;
+    if (i.avgDays && i.lastBought) {
+      const since = Math.round((dayStart(Date.now()) - dayStart(i.lastBought)) / 86400000);
+      return i.avgDays - since;
+    }
+    return Infinity;
+  }
+
+  // 品名からストックの前回購入日を引く（無ければ null）
+  function lastBoughtFor(name) {
+    const s = state.stock.find((x) => x.name === name);
+    return s && s.lastBought ? s.lastBought : null;
+  }
+  function dateCell(ts) {
+    return ts ? fmtDate(ts) : `<span class="nodate">—</span>`;
+  }
+
+  // ===== 描画 =====
+  function renderTabs() {
+    $("#tabs").innerHTML = CATS.map((c) =>
+      `<div class="tab ${state.filter === c.id ? "on" : ""}" data-f="${c.id}">${c.emoji} ${c.label}</div>`
+    ).join("");
+  }
+
+  function renderList() {
+    if (state.view === "stock") return renderStock();
+    const area = $("#listArea");
+    let items = state.items.slice();
+    if (state.filter !== "all") items = items.filter((i) => i.cat === state.filter);
+
+    const todo = items.filter((i) => !i.done);
+    const done = items.filter((i) => i.done);
+
+    if (items.length === 0) {
+      area.innerHTML = `<div class="empty"><div class="big">🛒</div>まだ何もありません。<br>下の🎤ボタンか＋で追加してね。</div>`;
+      return;
+    }
+
+    let html = `<div class="stock-head"><span></span><span>種類</span><span>品名</span><span>前回購入</span><span></span></div>`;
+    html += `<div class="list">` + todo.map(itemHTML).join("") + `</div>`;
+    if (done.length) {
+      html += `<div class="section-label">✓ 買ったもの（${done.length}）</div>`;
+      html += `<div class="list">` + done.map(itemHTML).join("") + `</div>`;
+      html += `<button class="clear-done" id="clearDone">🛒 買ったものをストックへ記録</button>`;
+    }
+    area.innerHTML = html;
+  }
+
+  function renderStock() {
+    const area = $("#listArea");
+    if (state.stock.length === 0) {
+      area.innerHTML = `<div class="empty"><div class="big">📦</div>常備するものを登録しましょう。<br>洗剤・米・トイレットペーパー など、下から追加してね。<br><span style="font-size:13px;opacity:.85">「🔴ない」にすると自動で買い物リストに入ります</span></div>`;
+      return;
+    }
+    let items = state.stock.slice();
+    if (state.filter !== "all") items = items.filter((i) => i.cat === state.filter);
+    // 第1優先：回転率から予測して「早く切れそうな順」／第2優先：前回購入日の古い順
+    items.sort((a, b) => {
+      const pa = predLeft(a), pb = predLeft(b);
+      if (pa !== pb) return pa - pb;
+      const la = a.lastBought || Infinity, lb = b.lastBought || Infinity;
+      return la === lb ? 0 : la - lb;
+    });
+    if (items.length === 0) {
+      area.innerHTML = `<div class="empty"><div class="big">📦</div>このカテゴリのストックはありません。</div>`;
+      return;
+    }
+    const head = `<div class="stock-head"><span></span><span>種類</span><span>品名</span><span>前回購入</span><span></span></div>`;
+    area.innerHTML = head + `<div class="list">` + items.map(stockHTML).join("") + `</div>`;
+  }
+
+  function stockHTML(i) {
+    const c = catInfo(i.cat);
+    const st = STATUS[i.status] || STATUS.ok;
+    const nameHtml = state.editing === i.id
+      ? `<input class="edit-input" value="${escapeHtml(i.name)}">`
+      : `<div class="name" data-act="edit">${escapeHtml(i.name)}</div>`;
+    return `<div class="item stock s-${i.status || "ok"}" data-id="${i.id}">
+      <button class="stt" data-act="status" title="${st.label}">${st.emoji}</button>
+      <span class="col-cat" data-act="cat">${c.emoji}${c.label}</span>
+      <div class="col-name">${nameHtml}</div>
+      <span class="col-date">${dateCell(i.lastBought)}</span>
+      <button class="del" data-act="del">×</button>
+    </div>`;
+  }
+
+  // 買い物リストへ（重複は追加しない）
+  function addToShop(name, cat) {
+    if (state.items.some((i) => !i.done && i.name === name)) return;
+    state.items.unshift({ id: genId(), name, cat: cat || guessCat(name) || "other", done: false, ts: Date.now() });
+    save();
+    const h = $("#hint"); if (h) h.textContent = `✅ 「${name}」を買い物リストに追加しました`;
+  }
+
+  function itemHTML(i) {
+    const c = catInfo(i.cat);
+    const nameHtml = state.editing === i.id
+      ? `<input class="edit-input" value="${escapeHtml(i.name)}">`
+      : `<div class="name" data-act="edit">${escapeHtml(i.name)}</div>`;
+    return `<div class="item shop ${i.done ? "done" : ""}" data-id="${i.id}">
+      <div class="check" data-act="toggle">✓</div>
+      <span class="col-cat" data-act="cat">${c.emoji}${c.label}</span>
+      <div class="col-name">${nameHtml}</div>
+      <span class="col-date">${dateCell(lastBoughtFor(i.name))}</span>
+      <button class="del" data-act="del">×</button>
+    </div>`;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  }
+
+  function render() { renderTabs(); renderList(); updateDock(); }
+
+  function updateDock() {
+    const t = $("#text"); const h = $("#hint");
+    if (state.view === "stock") {
+      t.placeholder = "洗剤、米、トイレットペーパー…";
+      if (!listening) h.textContent = "常備するものを追加。🟢🟡🔴をタップで残量を管理";
+    } else {
+      t.placeholder = "牛乳、洗剤 など…";
+      if (!listening) h.textContent = "🎤ボタンを押して、ほしいものを話してね";
+    }
+  }
+
+  // ===== 追加 =====
+  function addItem(name) {
+    name = name.trim();
+    if (!name) return;
+    // 「牛乳と卵」のように読点や「と」で区切って複数追加
+    const parts = name.split(/[、,，]|\s+と\s+|\n/).map((s) => s.trim()).filter(Boolean);
+    const list = parts.length ? parts : [name];
+    list.forEach((p) => {
+      const guessed = guessCat(p) || "food";
+      if (state.view === "stock") {
+        state.stock.unshift({ id: genId(), name: p, cat: guessed, status: "ok", ts: Date.now() });
+      } else {
+        state.items.unshift({ id: genId(), name: p, cat: guessed, done: false, ts: Date.now() });
+      }
+    });
+    save(); renderList();
+  }
+
+  // ===== イベント =====
+  $("#tabs").addEventListener("click", (e) => {
+    const t = e.target.closest(".tab"); if (!t) return;
+    state.filter = t.dataset.f; renderTabs(); renderList();
+  });
+
+  $("#listArea").addEventListener("click", (e) => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const id = e.target.closest(".item").dataset.id;
+    const coll = state.view === "stock" ? "stock" : "items";
+    const arr = state.view === "stock" ? state.stock : state.items;
+    const item = arr.find((i) => i.id === id);
+    if (!item) return;
+    const act = el.dataset.act;
+
+    if (act === "toggle") { // 買い物リスト：買ったチェック
+      item.done = !item.done; save(); renderList();
+    }
+    if (act === "status") { // ストック：残量をタップで切替
+      const next = (STATUS[item.status] || STATUS.ok).next;
+      item.status = next; save(); renderList();
+      if (next === "low" || next === "out") addToShop(item.name, item.cat);
+    }
+    if (act === "del") {
+      if (coll === "stock") state.stock = state.stock.filter((i) => i.id !== id);
+      else state.items = state.items.filter((i) => i.id !== id);
+      save(); renderList();
+    }
+    if (act === "cat") {
+      const order = ["food", "daily", "other"];
+      item.cat = order[(order.indexOf(item.cat) + 1) % order.length];
+      save(); renderList();
+    }
+    if (act === "edit") {
+      state.editing = id; renderList();
+      const inp = document.querySelector(`.item[data-id="${id}"] .edit-input`);
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  });
+
+  // 名前の編集を保存
+  function commitEdit(id, val) {
+    const arr = state.view === "stock" ? state.stock : state.items;
+    const item = arr.find((i) => i.id === id);
+    state.editing = null;
+    const v = val.trim();
+    if (item && v) {
+      const g = guessCat(v);
+      Object.assign(item, g ? { name: v, cat: g } : { name: v });
+    }
+    save(); renderList();
+  }
+  $("#listArea").addEventListener("keydown", (e) => {
+    const inp = e.target.closest(".edit-input"); if (!inp) return;
+    if (e.key === "Enter") { e.preventDefault(); commitEdit(e.target.closest(".item").dataset.id, inp.value); }
+    if (e.key === "Escape") { state.editing = null; renderList(); }
+  });
+  $("#listArea").addEventListener("focusout", (e) => {
+    const inp = e.target.closest(".edit-input"); if (!inp) return;
+    commitEdit(e.target.closest(".item").dataset.id, inp.value);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.id === "clearDone") clearBought();
+  });
+
+  // 買ったものを → ストックへ記録（前回購入日つき）＆リストから消す
+  function clearBought() {
+    const bought = state.items.filter((i) => i.done);
+    if (!bought.length) return;
+    const now = Date.now();
+    bought.forEach((bi) => {
+      const existing = state.stock.find((s) => s.name === bi.name);
+      if (existing) {
+        // 前回購入からの日数＝その在庫が持った期間。これを学習して回転率(avgDays)にする
+        const gap = existing.lastBought ? Math.round((dayStart(now) - dayStart(existing.lastBought)) / 86400000) : 0;
+        const prev = existing.lastBought;
+        existing.status = "ok"; existing.lastBought = now;
+        if (gap > 0) {
+          existing.avgDays = existing.avgDays ? Math.round(existing.avgDays * 0.5 + gap * 0.5) : gap;
+          existing.prevBought = prev;
+        }
+      } else {
+        state.stock.unshift({ id: genId(), name: bi.name, cat: bi.cat, status: "ok", lastBought: now, ts: now });
+      }
+    });
+    state.items = state.items.filter((i) => !i.done);
+    save(); renderList();
+    const h = $("#hint"); if (h) h.textContent = `✅ ${bought.length}件をストックへ記録しました（📦で確認）`;
+  }
+
+  // ===== かいもの／ストック 切り替え =====
+  document.querySelector(".viewtoggle").addEventListener("click", (e) => {
+    const b = e.target.closest(".vt"); if (!b) return;
+    state.view = b.dataset.v; state.editing = null; state.filter = "all";
+    document.querySelectorAll(".vt").forEach((x) => x.classList.toggle("on", x.dataset.v === state.view));
+    render();
+  });
+
+  $("#add").addEventListener("click", () => {
+    addItem($("#text").value); $("#text").value = ""; $("#text").focus();
+  });
+  $("#text").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { addItem($("#text").value); $("#text").value = ""; }
+  });
+
+  // ===== 音声入力（Web Speech API）=====
+  const mic = $("#mic");
+  const hint = $("#hint");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+
+  if (!SR) {
+    mic.style.opacity = ".4";
+    mic.addEventListener("click", () => {
+      hint.textContent = "このブラウザは音声入力に未対応。＋で手入力してね（スマホのChromeやSafari推奨）";
+    });
+  } else {
+    rec = new SR();
+    rec.lang = "ja-JP";
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    mic.addEventListener("click", () => {
+      if (listening) { rec.stop(); return; }
+      try { rec.start(); } catch (_) {}
+    });
+
+    rec.onstart = () => { listening = true; mic.classList.add("rec"); hint.textContent = "🎤 聞いています…話してね"; };
+    rec.onerror = (e) => {
+      listening = false; mic.classList.remove("rec");
+      hint.textContent = e.error === "not-allowed"
+        ? "マイクの使用がブロックされています。ブラウザの設定で許可してね"
+        : "うまく聞き取れませんでした。もう一度どうぞ";
+    };
+    rec.onend = () => { listening = false; mic.classList.remove("rec"); setTimeout(resetHint, 2500); };
+    rec.onresult = (e) => {
+      let txt = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+      if (e.results[e.results.length - 1].isFinal) {
+        const clean = txt.replace(/[。.\s]+$/,"").trim();
+        if (clean) { addItem(clean); hint.textContent = `「${clean}」を追加しました ✓`; }
+      } else {
+        hint.textContent = "🎤 " + txt;
+      }
+    };
+  }
+  function resetHint() { if (!listening) updateDock(); }
+
+  // ===== 初期表示 =====
+  render();
+</script>
