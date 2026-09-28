@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINEスタンプ・絵文字メーカー</title>
+<meta name="description" content="キャラを決めて、セリフを並べるだけ。LINEスタンプ／絵文字用のプロンプトを量産。ChatGPTに貼って画像化できます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F4EF; --card:#FFFFFF; --ink:#40403C; --sub:#8C8A82;
+    --line:#E7E3DA; --sage:#7C9A82; --sage-d:#5F7E66; --pink:#E7B7B7;
+    --chip:#F1EEE7; --shadow:0 10px 30px rgba(80,80,70,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#201F1C; --card:#2A2925; --ink:#EDEAE2; --sub:#A9A69C;
+      --line:#3A3833; --chip:#332F27; --shadow:0 10px 30px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#201F1C; --card:#2A2925; --ink:#EDEAE2; --sub:#A9A69C;
+    --line:#3A3833; --chip:#332F27; --shadow:0 10px 30px rgba(0,0,0,.3);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Zen Kaku Gothic New",system-ui,sans-serif; line-height:1.7; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px; margin:0 auto; padding:0 16px 60px}
+  header.top{display:flex; align-items:center; gap:12px; padding:20px 4px}
+  .logo{width:40px; height:40px; border-radius:12px; background:var(--sage);
+    display:grid; place-items:center; color:#fff; font-size:20px; flex:0 0 auto}
+  .brand .en{font-family:"Cormorant Garamond",serif; letter-spacing:.2em; font-size:12px; color:var(--sub)}
+  .brand .jp{font-family:"Shippori Mincho",serif; font-size:19px; font-weight:600; line-height:1.1}
+  header.top .chip-tag{margin-left:auto; font-size:12px; color:var(--sub);
+    border:1px solid var(--line); border-radius:999px; padding:7px 14px; background:var(--card)}
+  .hero{text-align:center; padding:22px 10px 26px}
+  .hero .kicker{font-family:"Cormorant Garamond",serif; letter-spacing:.26em; font-size:12px; color:var(--sage-d)}
+  .hero h1{font-family:"Shippori Mincho",serif; font-weight:600; font-size:clamp(22px,4.6vw,34px); margin:.35em 0 .3em}
+  .hero p{color:var(--sub); margin:0; font-size:14.5px}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start}
+  @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
+  .stepno{display:flex; align-items:center; gap:10px; margin-bottom:2px}
+  .stepno b{font-family:"Cormorant Garamond",serif; font-size:24px; color:var(--sage); line-height:1}
+  .stepno span{font-family:"Shippori Mincho",serif; font-size:17px; font-weight:600}
+  .flow{color:var(--sub); font-size:12.5px; margin:0 0 12px}
+  label.lbl{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; margin:15px 0 6px}
+  label.lbl .must{font-size:11px; color:#fff; background:var(--pink); border-radius:6px; padding:1px 7px}
+  label.lbl .opt{font-size:11px; color:var(--sub)}
+  textarea,input[type=text]{width:100%; border:1px solid var(--line); background:var(--bg); color:var(--ink);
+    border-radius:12px; padding:11px 13px; font:inherit; font-size:15px; resize:vertical}
+  textarea{min-height:70px}
+  .hint{font-size:11.5px; color:var(--sub); margin-top:4px}
+  .opts{display:flex; flex-wrap:wrap; gap:8px}
+  .opt-chip{border:1px solid var(--line); background:var(--card); color:var(--ink);
+    border-radius:999px; padding:9px 15px; font:inherit; font-size:13.5px; cursor:pointer; transition:.15s}
+  .opt-chip[aria-pressed=true]{background:var(--sage); border-color:var(--sage); color:#fff}
+  .typebtns{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .typebtn{border:1.5px solid var(--line); background:var(--card); color:var(--ink); border-radius:14px;
+    padding:12px; cursor:pointer; text-align:center; transition:.15s}
+  .typebtn[aria-pressed=true]{border-color:var(--sage); background:var(--chip)}
+  .typebtn .t{font-weight:700; font-size:15px}
+  .typebtn .s{font-size:11.5px; color:var(--sub)}
+  .go{width:100%; margin-top:20px; border:0; border-radius:14px; padding:15px; background:var(--sage); color:#fff;
+    font:inherit; font-size:16px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:.15s;
+    box-shadow:0 8px 18px rgba(124,154,130,.35)}
+  .go:hover{background:var(--sage-d)}
+  .rightlbl{font-family:"Cormorant Garamond",serif; letter-spacing:.2em; font-size:12px; color:var(--sub); margin-bottom:6px}
+  .righthead{font-family:"Shippori Mincho",serif; font-size:18px; font-weight:600; margin:0 0 6px}
+  .rightsub{font-size:12.5px; color:var(--sub); margin:0 0 14px}
+  .empty{color:var(--sub); text-align:center; font-size:13.5px; border:1px dashed var(--line);
+    border-radius:14px; padding:30px 16px}
+  .pcard{border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; background:var(--bg)}
+  .pcard h4{margin:0 0 8px; font-size:14px; display:flex; align-items:center; gap:8px}
+  .pcard h4 .num{background:var(--sage); color:#fff; border-radius:8px; font-size:12px; padding:1px 8px; font-family:"Cormorant Garamond",serif}
+  .pcard textarea{min-height:120px; font-size:13px; background:var(--card)}
+  .pbtns{display:flex; gap:8px; margin-top:8px}
+  .btn{border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; padding:9px 12px;
+    font:inherit; font-size:13px; font-weight:500; cursor:pointer; transition:.15s; display:flex; align-items:center; gap:6px}
+  .btn:hover{border-color:var(--sage)}
+  .btn.primary{background:var(--sage); border-color:var(--sage); color:#fff}
+  .btn.primary:hover{background:var(--sage-d)}
+  .topbtns{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap}
+  .howto{margin-top:14px; font-size:12.5px; color:var(--sub); line-height:1.9}
+  .howto b{color:var(--ink)}
+  .note{font-size:11.5px; color:var(--sub); margin-top:12px; border-top:1px solid var(--line); padding-top:10px}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); background:var(--ink);
+    color:var(--bg); padding:11px 20px; border-radius:999px; font-size:14px; opacity:0; pointer-events:none; transition:.25s; z-index:9}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  footer{text-align:center; color:var(--sub); font-size:12px; margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">✎</div>
+    <div class="brand">
+      <div class="en">LINE STICKER &amp; EMOJI</div>
+      <div class="jp">スタンプ・絵文字メーカー</div>
+    </div>
+    <div class="chip-tag">キャラを決めて、量産</div>
+  </header>
+
+  <section class="hero">
+    <div class="kicker">DESIGN YOUR OWN CHARACTER</div>
+    <h1>キャラを決めて、セリフを並べるだけ。</h1>
+    <p>LINEスタンプ／絵文字用のプロンプトをまとめて作成。ChatGPTに貼って画像化できます。</p>
+  </section>
+
+  <div class="grid">
+    <!-- 左：入力 -->
+    <div class="card">
+      <div class="stepno"><b>01</b><span>キャラを決める</span></div>
+      <p class="flow">キャラは1回決めればOK。全部同じ絵柄でそろいます。</p>
+
+      <label class="lbl">名前 <span class="opt">なくてもOK</span></label>
+      <input type="text" id="cname" placeholder="例：ぷくにゃん">
+
+      <label class="lbl">見た目 <span class="must">必須</span></label>
+      <textarea id="clook" placeholder="例：白いもちもちの丸い子猫。つぶらな瞳、ピンクのほっぺ、短いしっぽ"></textarea>
+      <div class="hint">動物・色・特徴を短く。ここがそろうと全部同じキャラになります。</div>
+
+      <label class="lbl">テイスト（絵の雰囲気）</label>
+      <div class="opts" id="tasteOpts">
+        <button class="opt-chip" data-v="ゆるくてかわいい手描き風、太めのやわらかい輪郭線、フラットで明るい色" aria-pressed="true">ゆるかわ手描き</button>
+        <button class="opt-chip" data-v="くっきり太い輪郭線、はっきりした色、シンプルでポップ" aria-pressed="false">くっきりポップ</button>
+        <button class="opt-chip" data-v="ぷっくりした立体的な塗り（3Dゼリーのような艶）、やわらかい光" aria-pressed="false">ぷっくり3D風</button>
+        <button class="opt-chip" data-v="シンプルな線画中心、少ない色、ミニマル" aria-pressed="false">シンプル線画</button>
+        <button class="opt-chip" data-v="やわらかい水彩画タッチ、にじみのある淡い色合い、透明感のある上品な塗り" aria-pressed="false">水彩風</button>
+        <button class="opt-chip" data-v="クレヨンや色えんぴつで描いたような、あたたかく素朴なタッチ" aria-pressed="false">クレヨン風</button>
+        <button class="opt-chip" data-v="やわらかいパステルカラー中心、ふんわりやさしい色合い" aria-pressed="false">パステル</button>
+        <button class="opt-chip" data-v="昭和レトロ調、どこか懐かしいくすみカラーとレトロな雰囲気" aria-pressed="false">昭和レトロ</button>
+        <button class="opt-chip" data-v="マンガ・アニメ風、はっきりした線とセルアニメのような塗り" aria-pressed="false">マンガ・アニメ風</button>
+        <button class="opt-chip" data-v="本物の羊毛フェルト（ニードルフェルト）風の質感。繊維がふわっと立った、マットで手作り感のある毛並み。彩度低めの生成り・ベージュ・くすみパステルでやさしいトーンに統一。赤いほっぺ、細めのやわらかい茶色の輪郭線、ふんわり最小限の影。小さなお花・ハート・キラキラをそっと添える。ときどきギンガムチェックの服や小物。文字は茶色の丸い手書き文字＋クリーム色のフチ取り。ほっこりナチュラルな雰囲気" aria-pressed="false">ふわもこ（ぬいぐるみ風）</button>
+      </div>
+
+      <label class="lbl">雰囲気オプション <span class="opt">任意・ひとこと足すと垢抜ける（複数OK）</span></label>
+      <div class="opts multi" id="moodOpts">
+        <button class="opt-chip" data-v="やわらかい自然光が当たったような、明るくやさしい光" aria-pressed="false">やわらかい自然光</button>
+        <button class="opt-chip" data-v="背景はすっきりシンプルにして主役を引き立てる" aria-pressed="false">背景すっきり</button>
+        <button class="opt-chip" data-v="映画のワンシーンのような雰囲気のある画づくり" aria-pressed="false">映画っぽい</button>
+        <button class="opt-chip" data-v="ふんわりとしたボケ感を加えて奥行きを出す" aria-pressed="false">ふんわりボケ</button>
+        <button class="opt-chip" data-v="全体をやわらかい水彩タッチに寄せて、やさしい印象に" aria-pressed="false">水彩タッチ</button>
+        <button class="opt-chip" data-v="昭和レトロ調の、どこか懐かしい空気感" aria-pressed="false">昭和レトロ感</button>
+      </div>
+      <div class="hint">気になったものを1〜2個だけ足すのがおすすめ（入れすぎると欲張りになります）。</div>
+
+      <div class="stepno" style="margin-top:22px"><b>02</b><span>何を作る？</span></div>
+      <label class="lbl">種類</label>
+      <div class="typebtns" id="typeBtns">
+        <button class="typebtn" data-v="stamp" aria-pressed="true">
+          <div class="t">🏷️ スタンプ</div><div class="s">370×320px・セリフ文字OK</div></button>
+        <button class="typebtn" data-v="emoji" aria-pressed="false">
+          <div class="t">🔣 絵文字</div><div class="s">180×180px・小さく大きく</div></button>
+      </div>
+
+      <label class="lbl">セリフ・気持ち（1行に1つ）<span class="must">必須</span></label>
+      <textarea id="serifu" style="min-height:130px" placeholder="おはよう&#10;ありがとう&#10;了解！&#10;おつかれさま&#10;ごめんね&#10;うれしい！&#10;がんばって&#10;おやすみ"></textarea>
+      <div class="hint">改行で区切ると、その数だけプロンプトを作ります（まず4〜8個がおすすめ）。</div>
+
+      <button class="go" id="go">プロンプトをまとめて作る</button>
+    </div>
+
+    <!-- 右：出力 -->
+    <div class="card">
+      <div class="rightlbl">YOUR PROMPTS</div>
+      <h2 class="righthead">ここに、貼るだけプロンプトが並びます</h2>
+      <p class="rightsub" id="rsub">左でキャラとセリフを入れて「まとめて作る」を押してください。</p>
+      <div class="topbtns" id="topbtns" style="display:none">
+        <button class="btn primary" id="copyAll">📋 全部コピー</button>
+        <button class="btn" id="openChat">💬 ChatGPTを開く</button>
+      </div>
+      <div id="out"><div class="empty">まだプロンプトはありません。<br>キャラの「見た目」とセリフを入れてね。</div></div>
+      <div class="howto">
+        <b>使い方</b><br>
+        ① 1つ目の「コピー」を押す　② 「ChatGPTを開く」<br>
+        ③ 貼り付けて送信 → 画像を保存（PNG）　④ 2つ目も同じように<br>
+        <span style="color:var(--sage-d)">※ 1つずつ作るほうが、キャラがそろってキレイです。</span>
+      </div>
+      <div class="note" id="specnote"></div>
+    </div>
+  </div>
+
+  <footer>© スタンプ・絵文字メーカー（プロンプト作成ツール／API連携なし）</footer>
+</div>
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var cname=$('cname'), clook=$('clook'), serifu=$('serifu'),
+      out=$('out'), toast=$('toast'), LS='line_maker_v1';
+
+  // 復元
+  try{ var s=JSON.parse(localStorage.getItem(LS)||'{}');
+    if(s.cname) cname.value=s.cname; if(s.clook) clook.value=s.clook; if(s.serifu) serifu.value=s.serifu;
+  }catch(e){}
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify({cname:cname.value,clook:clook.value,serifu:serifu.value})); }catch(e){} }
+  [cname,clook,serifu].forEach(function(el){ el.addEventListener('input', save); });
+
+  function pickGroup(id){
+    var box=$(id);
+    box.addEventListener('click', function(e){
+      var b=e.target.closest('[data-v]'); if(!b) return;
+      box.querySelectorAll('[data-v]').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+    });
+    return function(){ return box.querySelector('[aria-pressed=true]'); };
+  }
+  var getTaste=pickGroup('tasteOpts'), getType=pickGroup('typeBtns');
+
+  // 雰囲気オプション（複数選択）
+  var moodBox=$('moodOpts');
+  moodBox.addEventListener('click', function(e){
+    var b=e.target.closest('[data-v]'); if(!b) return;
+    b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')==='true'?'false':'true');
+  });
+  function getMoods(){
+    return Array.prototype.slice.call(moodBox.querySelectorAll('[aria-pressed=true]')).map(function(x){return x.dataset.v;});
+  }
+
+  var SPEC={
+    stamp:{
+      size:"370×320px（横長）",
+      spec:"LINEスタンプ用。キャラを1体だけ、中央に大きく。背景は白の無地（影を落とさない）。太くはっきりした輪郭線。まわりに少し余白。小さく表示されても伝わるよう、表情とポーズは大きくオーバーに。",
+      textline:function(word){ return "セリフの文字「"+word+"」を、読みやすい手書き風で大きく入れる。"; }
+    },
+    emoji:{
+      size:"180×180px（正方形）",
+      spec:"LINE絵文字用。とても小さく表示されるので、要素は1つだけを画面いっぱいに大きく、シンプルに。背景は白の無地（影を落とさない）。太い輪郭線・はっきりした色。細かい描き込みはしない。",
+      textline:function(word){ return "文字は入れず、「"+word+"」の気持ちを表情とポーズだけで表す（入れても1〜2文字まで）。"; }
+    }
+  };
+
+  function charDef(){
+    var nm=cname.value.trim(), look=clook.value.trim();
+    var head = nm ? ("「"+nm+"」というキャラ。"+look) : look;
+    return head + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
+  }
+
+  function buildOne(word, type){
+    var sp=SPEC[type];
+    var moods=getMoods();
+    var moodBlock = moods.length ? ("■ 雰囲気（ひとこと足す）：\n・"+moods.join("\n・")+"\n\n") : "";
+    return (
+"LINE"+(type==='stamp'?"スタンプ":"絵文字")+"用のイラストを1枚つくってください（サイズ目安 "+sp.size+"）。\n\n"+
+"■ キャラ：\n"+charDef()+"\n\n"+
+"■ 場面・気持ち：\n「"+word+"」に合う表情とポーズ。\n"+sp.textline(word)+"\n\n"+
+moodBlock+
+"■ 仕上げの条件：\n"+sp.spec+"\n・影は最小限、明るく元気な配色\n・背景は白の無地（影なし）。フチをはっきり描く（あとで白を透明に抜くため）\n・PNGで保存できる画像で"
+    );
+  }
+
+  function showToast(t){ toast.textContent=t; toast.classList.add('show'); setTimeout(function(){ toast.classList.remove('show'); },1500); }
+  function copy(text){
+    function fb(){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+    if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(text).then(function(){showToast('コピーしました');},function(){fb();showToast('コピーしました');}); }
+    else { fb(); showToast('コピーしました'); }
+  }
+
+  var allText='';
+  $('go').addEventListener('click', function(){
+    if(!clook.value.trim()){ clook.focus(); showToast('キャラの見た目を入れてね'); return; }
+    var words=serifu.value.split('\n').map(function(w){return w.trim();}).filter(Boolean);
+    if(!words.length){ serifu.focus(); showToast('セリフを1行に1つ入れてね'); return; }
+    if(words.length>16) words=words.slice(0,16);
+    var type=getType().dataset.v;
+    out.innerHTML=''; allText='';
+    words.forEach(function(w,i){
+      var p=buildOne(w,type); allText += (i? "\n\n=====\n\n":"") + "【"+(i+1)+". "+w+"】\n"+p;
+      var card=document.createElement('div'); card.className='pcard';
+      var h=document.createElement('h4'); h.innerHTML='<span class="num">'+(i+1)+'</span>'+w; card.appendChild(h);
+      var ta=document.createElement('textarea'); ta.readOnly=true; ta.value=p; card.appendChild(ta);
+      var row=document.createElement('div'); row.className='pbtns';
+      var cb=document.createElement('button'); cb.className='btn primary'; cb.textContent='📋 コピー';
+      cb.addEventListener('click', function(){ copy(p); }); row.appendChild(cb);
+      card.appendChild(row); out.appendChild(card);
+    });
+    $('rsub').textContent = words.length+'個のプロンプトができました。1つずつコピーして使ってね。';
+    $('topbtns').style.display='flex';
+    var sp=SPEC[type];
+    $('specnote').textContent='規格メモ：'+(type==='stamp'?'スタンプ':'絵文字')+' '+sp.size+'／背景透過PNG。ChatGPTの画像が背景付き・サイズ違いでも、あとでPC側で透過＆LINE規格に整えられます。';
+    out.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  $('copyAll') && $('copyAll').addEventListener('click', function(){ if(allText) copy(allText); });
+  $('openChat') && $('openChat').addEventListener('click', function(){ window.open('https://chatgpt.com/','_blank','noopener'); });
+})();
+</script>
+</body>
+</html>
