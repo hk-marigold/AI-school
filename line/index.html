@@ -41,6 +41,8 @@
   .hero p{color:var(--sub); margin:0; font-size:14.5px}
   .grid{display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start}
   @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+  .sp-only{display:none}
+  @media (max-width:820px){ .pc-only{display:none} .sp-only{display:inline} }
   .card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
   .stepno{display:flex; align-items:center; gap:10px; margin-bottom:2px}
   .stepno b{font-family:"Cormorant Garamond",serif; font-size:24px; color:var(--sage); line-height:1}
@@ -164,7 +166,7 @@
     <div class="card">
       <div class="rightlbl">YOUR PROMPTS</div>
       <h2 class="righthead">ここに、貼るだけプロンプトが並びます</h2>
-      <p class="rightsub" id="rsub">左でキャラとセリフを入れて「まとめて作る」を押してください。</p>
+      <p class="rightsub" id="rsub"><span class="pc-only">左</span><span class="sp-only">上</span>でキャラとセリフを入れて「まとめて作る」を押してください。</p>
       <div class="topbtns" id="topbtns" style="display:none">
         <button class="btn primary" id="copyAll">📋 全部コピー</button>
         <button class="btn" id="openChat">💬 ChatGPTを開く</button>
