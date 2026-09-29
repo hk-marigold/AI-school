@@ -92,6 +92,28 @@
     color:var(--bg); padding:11px 20px; border-radius:999px; font-size:14px; opacity:0; pointer-events:none; transition:.25s; z-index:9}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   footer{text-align:center; color:var(--sub); font-size:12px; margin-top:30px}
+  /* 03 仕上げ */
+  .pick{display:block; text-align:center; border:1.5px dashed var(--sage); border-radius:14px; padding:18px 12px;
+    background:var(--chip); color:var(--sage-d); font-weight:700; cursor:pointer}
+  .checker{background-color:#fff; background-image:conic-gradient(#e9e9e9 25%,#fff 0 50%,#e9e9e9 0 75%,#fff 0); background-size:14px 14px}
+  .fgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:14px}
+  .ftile{border:1.5px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); position:relative}
+  .ftile.main{border-color:var(--pink)}
+  .ftile img{display:block; width:100%; height:auto}
+  .ftile .bar{display:flex; align-items:center; gap:6px; padding:6px 8px; font-size:12px}
+  .ftile .bar .n{font-family:"Cormorant Garamond",serif; font-weight:600; color:var(--sage-d)}
+  .ftile .bar button{margin-left:auto; border:1px solid var(--line); background:var(--card); color:var(--ink);
+    border-radius:999px; font:inherit; font-size:11px; padding:3px 9px; cursor:pointer}
+  .ftile.main .bar button.mk{background:var(--pink); border-color:var(--pink); color:#fff}
+  .ftile .del{position:absolute; top:5px; right:5px; width:24px; height:24px; border-radius:50%; border:0;
+    background:rgba(0,0,0,.45); color:#fff; font-size:13px; line-height:24px; padding:0; cursor:pointer}
+  .extra{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--sub)}
+  .extra div{text-align:center}
+  .extra img{display:block; border:1px solid var(--line); border-radius:8px; margin:0 auto 4px}
+  .finmsg{margin-top:12px; font-size:13px; border-radius:12px; padding:10px 12px; background:var(--chip)}
+  .finmsg.ok{color:var(--sage-d)} .finmsg.warn{color:#B56B5B}
+  .go:disabled{opacity:.45; cursor:default; box-shadow:none}
+  a.btn{text-decoration:none; display:inline-flex}
 </style>
 </head>
 <body>
@@ -180,6 +202,48 @@
       </div>
       <div class="note" id="specnote"></div>
     </div>
+  </div>
+
+  <!-- 03：仕上げ -->
+  <div class="card" style="margin-top:22px">
+    <div class="stepno"><b>03</b><span>仕上げ（LINEの形にととのえる）</span></div>
+    <p class="flow">ChatGPTで作った絵をえらぶだけ。白い背景を透明にして、LINEのサイズに自動でそろえます。</p>
+
+    <label class="lbl">種類</label>
+    <div class="typebtns" id="finType">
+      <button class="typebtn" data-v="stamp" aria-pressed="true">
+        <div class="t">🏷️ スタンプ</div><div class="s">370×320px＋メイン＋タブ</div></button>
+      <button class="typebtn" data-v="emoji" aria-pressed="false">
+        <div class="t">🔣 絵文字</div><div class="s">180×180px＋タブ</div></button>
+    </div>
+
+    <label class="lbl">絵をえらぶ <span class="must">必須</span></label>
+    <label class="pick">📷 絵をえらぶ（まとめて選べます）
+      <input type="file" id="finFiles" accept="image/*" multiple hidden></label>
+    <div class="hint">写真アプリから、作った絵を全部えらんでね。えらんだ順＝スタンプの並び順です（もう一度えらぶと入れ替わります）。</div>
+
+    <label class="lbl">白の抜き具合</label>
+    <div class="opts" id="finLevel">
+      <button class="opt-chip" data-v="0" aria-pressed="false">ひかえめ</button>
+      <button class="opt-chip" data-v="1" aria-pressed="true">ふつう</button>
+      <button class="opt-chip" data-v="2" aria-pressed="false">しっかり</button>
+    </div>
+    <div class="hint">絵のフチが欠けたら「ひかえめ」、白いモヤが残ったら「しっかり」に。</div>
+
+    <div class="fgrid" id="finGrid"></div>
+    <div class="extra" id="finExtra"></div>
+    <div id="finMsg"></div>
+
+    <button class="go" id="finZip" disabled>📦 まとめて保存（ZIP）</button>
+
+    <div class="howto">
+      <b>04　LINEに出す</b><br>
+      ① 下のボタンから「LINE Creators Market」を開いてログイン<br>
+      ② 「新規登録」→ スタンプ名・説明文を入れる<br>
+      ③ 「スタンプ画像」→「ZIPファイルでアップロード」で、保存したZIPをえらぶ<br>
+      ④ 値段を決めて「リクエスト」（審査は数日〜1週間くらい）
+    </div>
+    <div class="pbtns"><a class="btn" href="https://creator.line.me/ja/" target="_blank" rel="noopener">🟢 LINE Creators Marketを開く</a></div>
   </div>
 
   <footer>© スタンプ・絵文字メーカー（プロンプト作成ツール／API連携なし）</footer>
@@ -279,12 +343,204 @@ moodBlock+
     $('rsub').textContent = words.length+'個のプロンプトができました。1つずつコピーして使ってね。';
     $('topbtns').style.display='flex';
     var sp=SPEC[type];
-    $('specnote').textContent='規格メモ：'+(type==='stamp'?'スタンプ':'絵文字')+' '+sp.size+'／背景透過PNG。ChatGPTの画像が背景付き・サイズ違いでも、あとでPC側で透過＆LINE規格に整えられます。';
+    $('specnote').textContent='規格メモ：'+(type==='stamp'?'スタンプ':'絵文字')+' '+sp.size+'／背景透過PNG。ChatGPTの画像が白背景・サイズ違いでも、下の「03 仕上げ」で透過＆LINE規格にととのえられます。';
     out.scrollIntoView({behavior:'smooth', block:'start'});
   });
 
   $('copyAll') && $('copyAll').addEventListener('click', function(){ if(allText) copy(allText); });
   $('openChat') && $('openChat').addEventListener('click', function(){ window.open('https://chatgpt.com/','_blank','noopener'); });
+
+  // ===== 03 仕上げ（白背景を透明に → LINE規格サイズへ → ZIP） =====
+  var TOL=[16,32,52];               // 白とみなす幅（ひかえめ／ふつう／しっかり）
+  var fin={items:[], main:0, busy:false};
+  var getFinType=pickGroup('finType'), getLevel=pickGroup('finLevel');
+  function newCanvas(w,h){ var c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+
+  // 02で種類を変えたら03もそろえる
+  $('typeBtns').addEventListener('click', function(e){
+    var b=e.target.closest('[data-v]'); if(!b) return;
+    $('finType').querySelectorAll('[data-v]').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.v===b.dataset.v?'true':'false'); });
+    renderFin();
+  });
+  $('finType').addEventListener('click', function(){ setTimeout(renderFin,0); });
+  $('finLevel').addEventListener('click', function(){ setTimeout(reprocess,0); });
+
+  // 外側からつながった白だけを透明にする（キャラの中の白は残る）→ 余白を切り詰め
+  function cutout(img, tol){
+    var sc=Math.min(1, 1200/Math.max(img.naturalWidth, img.naturalHeight));
+    var w=Math.max(1,Math.round(img.naturalWidth*sc)), h=Math.max(1,Math.round(img.naturalHeight*sc));
+    var c=newCanvas(w,h), x=c.getContext('2d');
+    x.drawImage(img,0,0,w,h);
+    var d=x.getImageData(0,0,w,h), p=d.data, n=w*h, i, j;
+    var already = p[3]<20 && p[(w-1)*4+3]<20 && p[(n-w)*4+3]<20 && p[(n-1)*4+3]<20;
+    if(!already){
+      var dark=new Uint8Array(n);
+      for(i=0;i<n;i++){ dark[i]=255-Math.min(p[i*4],p[i*4+1],p[i*4+2]); }
+      var mark=new Uint8Array(n), st=new Int32Array(n), sp=0;
+      function push(k){ if(!mark[k] && dark[k]<tol){ mark[k]=1; st[sp++]=k; } }
+      for(i=0;i<w;i++){ push(i); push(n-w+i); }
+      for(i=0;i<h;i++){ push(i*w); push(i*w+w-1); }
+      while(sp){ var k=st[--sp], cx=k%w;
+        if(cx>0) push(k-1); if(cx<w-1) push(k+1); if(k>=w) push(k-w); if(k<n-w) push(k+w); }
+      for(i=0;i<n;i++) if(mark[i]) p[i*4+3]=0;
+      // フチをなめらかに（白っぽいフチは半透明にして白のにじみを取る）
+      var soft=tol*1.6;
+      for(i=0;i<n;i++){
+        if(mark[i] || dark[i]>=tol+soft) continue;
+        var cx2=i%w;
+        if(!((cx2>0&&mark[i-1])||(cx2<w-1&&mark[i+1])||(i>=w&&mark[i-w])||(i<n-w&&mark[i+w]))) continue;
+        var a=Math.max(0.05,(dark[i]-tol)/soft);
+        for(j=0;j<3;j++){ p[i*4+j]=Math.max(0,Math.min(255,Math.round((p[i*4+j]-255*(1-a))/a))); }
+        p[i*4+3]=Math.round(255*a);
+      }
+      x.putImageData(d,0,0);
+    }
+    // 余白を切り詰め
+    var x0=w,y0=h,x1=-1,y1=-1;
+    for(var y=0;y<h;y++) for(var xx=0;xx<w;xx++){
+      if(p[(y*w+xx)*4+3]>12){ if(xx<x0)x0=xx; if(xx>x1)x1=xx; if(y<y0)y0=y; if(y>y1)y1=y; }
+    }
+    if(x1<0) return c;
+    var t=newCanvas(x1-x0+1,y1-y0+1);
+    t.getContext('2d').drawImage(c,x0,y0,t.width,t.height,0,0,t.width,t.height);
+    return t;
+  }
+
+  // 決まったサイズのキャンバスの真ん中に、余白つきで収める
+  function fit(src,W,H,m){
+    var s=Math.min((W-2*m)/src.width,(H-2*m)/src.height);
+    var tw=Math.max(1,Math.round(src.width*s)), th=Math.max(1,Math.round(src.height*s)), cur=src;
+    while(cur.width/2>tw && cur.height/2>th){
+      var hc=newCanvas(Math.round(cur.width/2),Math.round(cur.height/2)), hx=hc.getContext('2d');
+      hx.imageSmoothingQuality='high'; hx.drawImage(cur,0,0,hc.width,hc.height); cur=hc;
+    }
+    var c=newCanvas(W,H), x=c.getContext('2d');
+    x.imageSmoothingQuality='high';
+    x.drawImage(cur,Math.round((W-tw)/2),Math.round((H-th)/2),tw,th);
+    return c;
+  }
+
+  function loadImg(file){
+    return new Promise(function(ok,ng){
+      var url=URL.createObjectURL(file), im=new Image();
+      im.onload=function(){ ok(im); }; im.onerror=function(){ ng(file.name); }; im.src=url;
+    });
+  }
+
+  $('finFiles').addEventListener('change', function(){
+    var files=Array.prototype.slice.call(this.files||[]); this.value='';
+    if(!files.length) return;
+    if(files.length>40){ files=files.slice(0,40); showToast('40枚までにしました'); }
+    fin.busy=true; renderFin('読みこみ中…（'+files.length+'枚）');
+    Promise.all(files.map(function(f){ return loadImg(f).catch(function(){ return null; }); })).then(function(imgs){
+      fin.items=imgs.filter(Boolean).map(function(im){ return {img:im}; });
+      fin.main=0;
+      if(imgs.length!==fin.items.length) showToast('読めない画像がありました');
+      reprocess();
+    });
+  });
+
+  function reprocess(){
+    if(!fin.items.length){ renderFin(); return; }
+    fin.busy=true; renderFin('背景を透明にしています…');
+    setTimeout(function(){
+      var tol=TOL[+getLevel().dataset.v];
+      fin.items.forEach(function(it){ it.cut=cutout(it.img,tol); });
+      fin.busy=false; renderFin();
+    },30);
+  }
+
+  function outputs(){
+    var type=getFinType().dataset.v, list=[];
+    fin.items.forEach(function(it,i){
+      var nm = type==='stamp' ? ('0'+(i+1)).slice(-2)+'.png' : ('00'+(i+1)).slice(-3)+'.png';
+      list.push({name:nm, canvas: type==='stamp' ? fit(it.cut,370,320,10) : fit(it.cut,180,180,4)});
+    });
+    var m=fin.items[fin.main]||fin.items[0];
+    if(m){
+      if(type==='stamp') list.push({name:'main.png', canvas:fit(m.cut,240,240,10), extra:'メイン画像 240×240'});
+      list.push({name:'tab.png', canvas:fit(m.cut,96,74,2), extra:'タブ画像 96×74'});
+    }
+    return list;
+  }
+
+  function renderFin(msg){
+    var grid=$('finGrid'), ex=$('finExtra'), box=$('finMsg'), zip=$('finZip');
+    grid.innerHTML=''; ex.innerHTML=''; box.innerHTML='';
+    zip.disabled = fin.busy || !fin.items.length;
+    if(msg){ box.innerHTML='<div class="finmsg">'+msg+'</div>'; return; }
+    if(!fin.items.length || fin.busy) return;
+    var type=getFinType().dataset.v, outs=outputs(), cnt=fin.items.length;
+    outs.forEach(function(o,i){
+      var url=o.canvas.toDataURL('image/png');
+      if(o.extra){
+        var d=document.createElement('div');
+        d.innerHTML='<img class="checker" src="'+url+'" width="'+o.canvas.width+'" height="'+o.canvas.height+'">'+o.extra;
+        ex.appendChild(d); return;
+      }
+      var t=document.createElement('div'); t.className='ftile'+(i===fin.main?' main':'');
+      t.innerHTML='<img class="checker" src="'+url+'" alt="">'+
+        '<button class="del" title="はずす">✕</button>'+
+        '<div class="bar"><span class="n">'+(i+1)+'</span>'+
+        (type==='stamp'||type==='emoji' ? '<button class="mk">'+(i===fin.main?'★ 顔にする':'顔にする')+'</button>' : '')+'</div>';
+      t.querySelector('.del').addEventListener('click', function(){
+        fin.items.splice(i,1); if(fin.main>=fin.items.length) fin.main=0; else if(i<fin.main) fin.main--; renderFin();
+      });
+      t.querySelector('.mk').addEventListener('click', function(){ fin.main=i; renderFin(); });
+      grid.appendChild(t);
+    });
+    var ok, note;
+    if(type==='stamp'){
+      var sets=[8,16,24,32,40]; ok=sets.indexOf(cnt)>=0;
+      var next=sets.filter(function(s){return s>cnt;})[0];
+      note= ok ? '今 '+cnt+'個 ✓ このまま出せます' :
+        '今 '+cnt+'個。LINEスタンプは 8・16・24・32・40個 で出せます'+(next?'（あと'+(next-cnt)+'個で'+next+'個）':'');
+    } else {
+      ok=cnt>=8 && cnt<=40;
+      note= ok ? '今 '+cnt+'個 ✓ このまま出せます' : '今 '+cnt+'個。LINE絵文字は 8〜40個 で出せます';
+    }
+    box.innerHTML='<div class="finmsg '+(ok?'ok':'warn')+'">'+note+'<br><span style="font-size:11.5px;color:var(--sub)">★の絵が「顔」（'+(type==='stamp'?'メイン画像・':'')+'タブ画像）になります。</span></div>';
+  }
+
+  // --- ZIP（圧縮なし）をその場で作る ---
+  var CRC=(function(){ var t=new Uint32Array(256); for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+  function crc32(u){ var c=0xFFFFFFFF; for(var i=0;i<u.length;i++) c=CRC[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+  function pngBytes(canvas){
+    var b=atob(canvas.toDataURL('image/png').split(',')[1]), u=new Uint8Array(b.length);
+    for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u;
+  }
+  function makeZip(files){
+    var parts=[], central=[], off=0;
+    files.forEach(function(f){
+      var nm=new TextEncoder().encode(f.name), d=f.data, crc=crc32(d);
+      var h=new DataView(new ArrayBuffer(30));
+      h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(12,0x21,true);
+      h.setUint32(14,crc,true); h.setUint32(18,d.length,true); h.setUint32(22,d.length,true); h.setUint16(26,nm.length,true);
+      parts.push(h.buffer,nm,d);
+      var c=new DataView(new ArrayBuffer(46));
+      c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(14,0x21,true);
+      c.setUint32(16,crc,true); c.setUint32(20,d.length,true); c.setUint32(24,d.length,true); c.setUint16(28,nm.length,true);
+      c.setUint32(42,off,true);
+      central.push(c.buffer,nm);
+      off+=30+nm.length+d.length;
+    });
+    var cs=central.reduce(function(s,x){ return s+x.byteLength; },0);
+    var e=new DataView(new ArrayBuffer(22));
+    e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true);
+    e.setUint32(12,cs,true); e.setUint32(16,off,true);
+    return new Blob(parts.concat(central,[e.buffer]),{type:'application/zip'});
+  }
+
+  $('finZip').addEventListener('click', function(){
+    if(!fin.items.length || fin.busy) return;
+    var type=getFinType().dataset.v;
+    var blob=makeZip(outputs().map(function(o){ return {name:o.name, data:pngBytes(o.canvas)}; }));
+    var a=document.createElement('a'), url=URL.createObjectURL(blob);
+    a.href=url; a.download=(type==='stamp'?'line_stamp':'line_emoji')+'.zip';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); },4000);
+    showToast('ZIPを保存しました');
+  });
 })();
 </script>
 </body>
