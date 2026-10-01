@@ -139,9 +139,6 @@
       <div class="stepno"><b>01</b><span>キャラを決める</span></div>
       <p class="flow">キャラは1回決めればOK。全部同じ絵柄でそろいます。</p>
 
-      <label class="lbl">名前 <span class="opt">なくてもOK</span></label>
-      <input type="text" id="cname" placeholder="例：ぷくにゃん">
-
       <label class="lbl">見た目 <span class="must">必須</span></label>
       <textarea id="clook" placeholder="例：白いもちもちの丸い子猫。つぶらな瞳、ピンクのほっぺ、短いしっぽ"></textarea>
       <div class="hint">動物・色・特徴を短く。ここがそろうと全部同じキャラになります。</div>
@@ -253,15 +250,15 @@
 <script>
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var cname=$('cname'), clook=$('clook'), serifu=$('serifu'),
+  var clook=$('clook'), serifu=$('serifu'),
       out=$('out'), toast=$('toast'), LS='line_maker_v1';
 
   // 復元
   try{ var s=JSON.parse(localStorage.getItem(LS)||'{}');
-    if(s.cname) cname.value=s.cname; if(s.clook) clook.value=s.clook; if(s.serifu) serifu.value=s.serifu;
+    if(s.clook) clook.value=s.clook; if(s.serifu) serifu.value=s.serifu;
   }catch(e){}
-  function save(){ try{ localStorage.setItem(LS, JSON.stringify({cname:cname.value,clook:clook.value,serifu:serifu.value})); }catch(e){} }
-  [cname,clook,serifu].forEach(function(el){ el.addEventListener('input', save); });
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify({clook:clook.value,serifu:serifu.value})); }catch(e){} }
+  [clook,serifu].forEach(function(el){ el.addEventListener('input', save); });
 
   function pickGroup(id){
     var box=$(id);
@@ -297,9 +294,7 @@
   };
 
   function charDef(){
-    var nm=cname.value.trim(), look=clook.value.trim();
-    var head = nm ? ("「"+nm+"」というキャラ。"+look) : look;
-    return head + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
+    return clook.value.trim() + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
   }
 
   function buildOne(word, type){
