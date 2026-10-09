@@ -210,7 +210,8 @@
       <div class="howto">
         <b>使い方</b><br>
         ① 1つ目の「コピー」を押す　② 「ChatGPTを開く」<br>
-        ③ 貼り付けて送信 → 画像を保存（PNG）　④ 2つ目も同じように<br>
+        ③ 貼り付けて送信 → 画像を保存（PNG）<br>
+        ④ 2つ目からは、気に入った1枚目を「お手本」としてつけて貼る（キャラがそろいます）<br>
         <span style="color:var(--sage-d)">※ 1つずつ作るほうが、キャラがそろってキレイです。</span>
       </div>
       <div class="note" id="specnote"></div>
@@ -326,8 +327,9 @@
     }
   };
 
-  function charDef(){
-    var head = isPhoto()
+  function charDef(idx){
+    var head = (isPhoto() && idx>0) ? ("「"+pname.value.trim()+"」をモデルにしたキャラクター（添付したお手本画像のキャラ）")
+      : isPhoto()
       ? "添付した写真の「"+pname.value.trim()+"」をモデルにしたキャラクター。写真の特徴（顔つき・目や鼻の形・耳の形・毛の色や模様・体型）をいかして、ひと目で「"+pname.value.trim()+"」とわかるようにしつつ、写真そのままではなく、下の絵柄でかわいくデフォルメしたイラストに描き直す（色は写真の毛色をもとにする）"
       : clook.value.trim();
     return head + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
@@ -377,7 +379,14 @@
     });
   }
 
-  function buildOne(word, type, pose){
+  // 2つ目以降：お手本画像（気に入った1枚）を添付して、キャラを固定する
+  var KEEP = "■ いちばん大事（キャラをそろえる）：\n"+
+    "添付したお手本画像のキャラクターと、まったく同じキャラで描いてください。\n"+
+    "・そのままにする：顔のパーツ（目・鼻・口）の形・位置・大きさ、毛の色と模様、耳の形、体型と頭身、質感、ほっぺの色、絵柄と光の当たり方\n"+
+    "・変えるのは：ポーズ・表情・セリフだけ\n"+
+    "・お手本のポーズや持ち物はまねしない\n\n";
+
+  function buildOne(word, type, pose, idx){
     var sp=SPEC[type];
     var moods=getMoods();
     var moodBlock = moods.length ? ("■ 雰囲気（ひとこと足す）：\n・"+moods.join("\n・")+"\n\n") : "";
@@ -393,7 +402,8 @@
     }
     return (
 "LINE"+(type==='stamp'?"スタンプ":"絵文字")+"用のイラストを1枚つくってください（サイズ目安 "+sp.size+"）。\n\n"+
-"■ キャラ：\n"+charDef()+"\n\n"+
+(idx>0 ? KEEP : "")+
+"■ キャラ：\n"+charDef(idx)+"\n\n"+
 "■ 場面・気持ち：\n「"+word+"」に合う表情。\n"+textline+"\n\n"+
 "■ ポーズ：\n"+pose+"。\nセットの他のスタンプとはちがうポーズにする（前の画像と同じ立ちポーズ・同じ持ち物をくり返さない）。\n\n"+
 moodBlock+
@@ -419,7 +429,7 @@ moodBlock+
     out.innerHTML=''; allText='';
     var poses=pickPoses(words);
     words.forEach(function(w,i){
-      var p=buildOne(w,type,poses[i]); allText += (i? "\n\n=====\n\n":"") + "【"+(i+1)+". "+w+"】\n"+p;
+      var p=buildOne(w,type,poses[i],i); allText += (i? "\n\n=====\n\n":"") + "【"+(i+1)+". "+w+"】\n"+p;
       var card=document.createElement('div'); card.className='pcard';
       var h=document.createElement('h4'); h.innerHTML='<span class="num">'+(i+1)+'</span>'+w; card.appendChild(h);
       var ta=document.createElement('textarea'); ta.readOnly=true; ta.value=p; card.appendChild(ta);
@@ -429,7 +439,8 @@ moodBlock+
       card.appendChild(row); out.appendChild(card);
     });
     $('rsub').textContent = words.length+'個のプロンプトができました。1つずつコピーして使ってね。'+
-      (isPhoto() ? '\n📷 1つ目を貼るときは、写真もいっしょにChatGPTへ送ってね。2つ目からは同じチャットに続けて貼ればOK（写真はもう送らなくて大丈夫）。' : '');
+      (isPhoto() ? '\n📷 1つ目は、写真もいっしょにChatGPTへ送ってね。' : '')+
+      (words.length>1 ? '\n⭐ キャラをそろえるコツ：1つ目の絵が気に入ったら保存して「お手本」にしてね。2つ目からは、そのお手本の絵をつけて貼ってね。' : '');
     $('topbtns').style.display='flex';
     var sp=SPEC[type];
     $('specnote').textContent='規格メモ：'+(type==='stamp'?'スタンプ':'絵文字')+' '+sp.size+'／背景透過PNG。ChatGPTの画像が白背景・サイズ違いでも、下の「03 仕上げ」で透過＆LINE規格にととのえられます。';
