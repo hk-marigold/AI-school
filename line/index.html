@@ -150,7 +150,7 @@
         <button class="opt-chip" data-v="やわらかい水彩画タッチ、にじみのある淡い色合い、透明感のある上品な塗り" aria-pressed="false">水彩風</button>
         <button class="opt-chip" data-v="クレヨンや色えんぴつで描いたような、あたたかく素朴なタッチ" aria-pressed="false">クレヨン風</button>
         <button class="opt-chip" data-v="シンプルな線画風、すっきりした線が主役、色は少なめでミニマル" aria-pressed="false">線画風</button>
-        <button class="opt-chip" data-v="本物の羊毛フェルト（ニードルフェルト）風の質感。繊維がふわっと立った、マットで手作り感のある毛並み。彩度低めの生成り・ベージュ・くすみパステルでやさしいトーンに統一。赤いほっぺ、細めのやわらかい茶色の輪郭線、ふんわり最小限の影。小さなお花・ハート・キラキラをそっと添える。ときどきギンガムチェックの服や小物。文字は茶色の丸い手書き文字＋クリーム色のフチ取り。ほっこりナチュラルな雰囲気" aria-pressed="false">ふわもこ（ぬいぐるみ風）</button>
+        <button class="opt-chip" data-v="本物の羊毛フェルト（ニードルフェルト）風の質感。スタンプは小さく表示されるので、もこもこ感は大げさに：毛並みは細かい毛ではなく、大きめで粗い毛のかたまり（ぽこぽこした房）で描く。輪郭線で囲まず、シルエットのフチ全体を毛羽立たせて、外側に短い毛がふわふわ飛び出す形にする。毛の明るい部分と影の部分の差をはっきりつけて、立体感と毛のかたまりが遠目でもわかるように。彩度低めの生成り・ベージュ・くすみパステルでやさしいトーンに統一。赤いほっぺ。キャラを主役に画面の7割くらいまで大きく描き、お花・ハート・キラキラなどの飾りは1〜2個だけ小さく添える。ときどきギンガムチェックの服や小物。文字は茶色の丸い手書き文字＋クリーム色のフチ取りで、画面の上4分の1くらいに収める。ほっこりナチュラルな雰囲気" data-fuzzy="1" aria-pressed="false">ふわもこ（ぬいぐるみ風）</button>
       </div>
 
       <label class="lbl">雰囲気オプション <span class="opt">任意・ひとこと足すと垢抜ける（複数OK）</span></label>
@@ -227,6 +227,14 @@
     </div>
     <div class="hint">絵のフチが欠けたら「ひかえめ」、白いモヤが残ったら「しっかり」に。</div>
 
+    <label class="lbl">くっきり補正</label>
+    <div class="opts" id="finSharp">
+      <button class="opt-chip" data-v="0" aria-pressed="false">なし</button>
+      <button class="opt-chip" data-v="1" aria-pressed="true">ふつう</button>
+      <button class="opt-chip" data-v="2" aria-pressed="false">強め</button>
+    </div>
+    <div class="hint">小さくしてもつぶれないよう、毛並みや線をくっきりさせます。もこもこ感が足りなければ「強め」に。</div>
+
     <div class="fgrid" id="finGrid"></div>
     <div class="extra" id="finExtra"></div>
     <div id="finMsg"></div>
@@ -301,12 +309,16 @@
     var sp=SPEC[type];
     var moods=getMoods();
     var moodBlock = moods.length ? ("■ 雰囲気（ひとこと足す）：\n・"+moods.join("\n・")+"\n\n") : "";
+    var spec = sp.spec;
+    if(getTaste().dataset.fuzzy){ // ふわもこ：太い輪郭線のかわりに毛羽立ったシルエット
+      spec = spec.replace(/太くはっきりした輪郭線。|太い輪郭線・/, "輪郭は線で囲まず、毛羽立ったもこもこのシルエットで見せる。");
+    }
     return (
 "LINE"+(type==='stamp'?"スタンプ":"絵文字")+"用のイラストを1枚つくってください（サイズ目安 "+sp.size+"）。\n\n"+
 "■ キャラ：\n"+charDef()+"\n\n"+
 "■ 場面・気持ち：\n「"+word+"」に合う表情とポーズ。\n"+sp.textline(word)+"\n\n"+
 moodBlock+
-"■ 仕上げの条件：\n"+sp.spec+"\n・影は最小限、明るく元気な配色\n・背景は白の無地（影なし）。フチをはっきり描く（あとで白を透明に抜くため）\n・PNGで保存できる画像で"
+"■ 仕上げの条件：\n"+spec+"\n・影は最小限、明るく元気な配色\n・背景は白の無地（影なし）。フチをはっきり描く（あとで白を透明に抜くため）\n・PNGで保存できる画像で"
     );
   }
 
@@ -346,9 +358,29 @@ moodBlock+
   $('openChat') && $('openChat').addEventListener('click', function(){ window.open('https://chatgpt.com/','_blank','noopener'); });
 
   // ===== 03 仕上げ（白背景を透明に → LINE規格サイズへ → ZIP） =====
-  var TOL=[16,32,52];               // 白とみなす幅（ひかえめ／ふつう／しっかり）
+  var TOL=[12,24,44];               // 白とみなす幅（ひかえめ／ふつう／しっかり）
+  var SHARP=[0,0.55,1.1];           // くっきり補正の強さ（なし／ふつう／強め）
   var fin={items:[], main:0, busy:false};
-  var getFinType=pickGroup('finType'), getLevel=pickGroup('finLevel');
+  var getFinType=pickGroup('finType'), getLevel=pickGroup('finLevel'), getSharp=pickGroup('finSharp');
+  $('finSharp').addEventListener('click', function(){ setTimeout(function(){ renderFin(); },0); });
+
+  // 縮めたあとの毛並み・線をくっきりさせる（アンシャープマスク。透明な所は計算に入れない）
+  function sharpen(c, amt){
+    if(!amt) return c;
+    var x=c.getContext('2d'), w=c.width, h=c.height, d=x.getImageData(0,0,w,h), p=d.data, src=new Uint8ClampedArray(p);
+    for(var y=0;y<h;y++) for(var xx=0;xx<w;xx++){
+      var i=(y*w+xx)*4; if(src[i+3]<8) continue;
+      var r=0,g=0,b=0,n=0;
+      for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){
+        var yy=y+dy, x2=xx+dx; if(yy<0||yy>=h||x2<0||x2>=w) continue;
+        var j=(yy*w+x2)*4; if(src[j+3]<8) continue;
+        r+=src[j]; g+=src[j+1]; b+=src[j+2]; n++;
+      }
+      p[i]=src[i]+amt*(src[i]-r/n); p[i+1]=src[i+1]+amt*(src[i+1]-g/n); p[i+2]=src[i+2]+amt*(src[i+2]-b/n);
+    }
+    x.putImageData(d,0,0);
+    return c;
+  }
   function newCanvas(w,h){ var c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
 
   // 02で種類を変えたら03もそろえる
@@ -379,7 +411,7 @@ moodBlock+
         if(cx>0) push(k-1); if(cx<w-1) push(k+1); if(k>=w) push(k-w); if(k<n-w) push(k+w); }
       for(i=0;i<n;i++) if(mark[i]) p[i*4+3]=0;
       // フチをなめらかに（白っぽいフチは半透明にして白のにじみを取る）
-      var soft=tol*1.6;
+      var soft=tol*2.4;              // 広めにとって、毛羽立ったフチを半透明で残す
       for(i=0;i<n;i++){
         if(mark[i] || dark[i]>=tol+soft) continue;
         var cx2=i%w;
@@ -446,15 +478,16 @@ moodBlock+
   }
 
   function outputs(){
-    var type=getFinType().dataset.v, list=[];
+    var type=getFinType().dataset.v, list=[], amt=SHARP[+getSharp().dataset.v];
+    var F=function(s,W,H,m){ return sharpen(fit(s,W,H,m), W<120?amt*0.5:amt); };
     fin.items.forEach(function(it,i){
       var nm = type==='stamp' ? ('0'+(i+1)).slice(-2)+'.png' : ('00'+(i+1)).slice(-3)+'.png';
-      list.push({name:nm, canvas: type==='stamp' ? fit(it.cut,370,320,10) : fit(it.cut,180,180,4)});
+      list.push({name:nm, canvas: type==='stamp' ? F(it.cut,370,320,10) : F(it.cut,180,180,4)});
     });
     var m=fin.items[fin.main]||fin.items[0];
     if(m){
-      if(type==='stamp') list.push({name:'main.png', canvas:fit(m.cut,240,240,10), extra:'メイン画像 240×240'});
-      list.push({name:'tab.png', canvas:fit(m.cut,96,74,2), extra:'タブ画像 96×74'});
+      if(type==='stamp') list.push({name:'main.png', canvas:F(m.cut,240,240,10), extra:'メイン画像 240×240'});
+      list.push({name:'tab.png', canvas:F(m.cut,96,74,2), extra:'タブ画像 96×74'});
     }
     return list;
   }
