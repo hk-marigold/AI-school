@@ -71,7 +71,7 @@
   .go:hover{background:var(--sage-d)}
   .rightlbl{font-family:"Cormorant Garamond",serif; letter-spacing:.2em; font-size:12px; color:var(--sub); margin-bottom:6px}
   .righthead{font-family:"Shippori Mincho",serif; font-size:18px; font-weight:600; margin:0 0 6px}
-  .rightsub{font-size:12.5px; color:var(--sub); margin:0 0 14px}
+  .rightsub{font-size:12.5px; color:var(--sub); margin:0 0 14px; white-space:pre-line}
   .empty{color:var(--sub); text-align:center; font-size:13.5px; border:1px dashed var(--line);
     border-radius:14px; padding:30px 16px}
   .pcard{border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; background:var(--bg)}
@@ -139,9 +139,24 @@
       <div class="stepno"><b>01</b><span>キャラを決める</span></div>
       <p class="flow">キャラは1回決めればOK。全部同じ絵柄でそろいます。</p>
 
-      <label class="lbl">見た目 <span class="must">必須</span></label>
-      <textarea id="clook" placeholder="例：白いもちもちの丸い子猫。つぶらな瞳、ピンクのほっぺ、短いしっぽ"></textarea>
-      <div class="hint">動物・色・特徴を短く。ここがそろうと全部同じキャラになります。</div>
+      <label class="lbl">キャラの決め方</label>
+      <div class="typebtns" id="srcMode">
+        <button class="typebtn" data-v="word" aria-pressed="true">
+          <div class="t">✏️ 言葉で決める</div><div class="s">見た目を文章で書く</div></button>
+        <button class="typebtn" data-v="photo" aria-pressed="false">
+          <div class="t">📷 写真から作る</div><div class="s">写真をイラストにする</div></button>
+      </div>
+
+      <div id="wordBox">
+        <label class="lbl">見た目 <span class="must">必須</span></label>
+        <textarea id="clook" placeholder="例：白いもちもちの丸い子猫。つぶらな瞳、ピンクのほっぺ、短いしっぽ"></textarea>
+        <div class="hint">動物・色・特徴を短く。ここがそろうと全部同じキャラになります。</div>
+      </div>
+      <div id="photoBox" style="display:none">
+        <label class="lbl">キャラの名前 <span class="must">必須</span></label>
+        <input type="text" id="pname" placeholder="例：クアッカワラビー">
+        <div class="hint">写真に写っている動物などの名前。写真は、ChatGPTに1つ目のプロンプトを貼るときに、いっしょに送ってね。</div>
+      </div>
 
       <label class="lbl">テイスト（絵の雰囲気）</label>
       <div class="opts" id="tasteOpts">
@@ -259,15 +274,24 @@
 <script>
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var clook=$('clook'), serifu=$('serifu'),
+  var clook=$('clook'), pname=$('pname'), serifu=$('serifu'),
       out=$('out'), toast=$('toast'), LS='line_maker_v1';
 
   // 復元
   try{ var s=JSON.parse(localStorage.getItem(LS)||'{}');
-    if(s.clook) clook.value=s.clook; if(s.serifu) serifu.value=s.serifu;
+    if(s.clook) clook.value=s.clook; if(s.pname) pname.value=s.pname; if(s.serifu) serifu.value=s.serifu;
   }catch(e){}
-  function save(){ try{ localStorage.setItem(LS, JSON.stringify({clook:clook.value,serifu:serifu.value})); }catch(e){} }
-  [clook,serifu].forEach(function(el){ el.addEventListener('input', save); });
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify({clook:clook.value,pname:pname.value,serifu:serifu.value})); }catch(e){} }
+  [clook,pname,serifu].forEach(function(el){ el.addEventListener('input', save); });
+
+  // キャラの決め方（言葉／写真）
+  function isPhoto(){ return $('srcMode').querySelector('[aria-pressed=true]').dataset.v==='photo'; }
+  $('srcMode').addEventListener('click', function(e){
+    var b=e.target.closest('[data-v]'); if(!b) return;
+    $('srcMode').querySelectorAll('[data-v]').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+    $('wordBox').style.display = isPhoto()?'none':'';
+    $('photoBox').style.display = isPhoto()?'':'none';
+  });
 
   function pickGroup(id){
     var box=$(id);
@@ -303,7 +327,10 @@
   };
 
   function charDef(){
-    return clook.value.trim() + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
+    var head = isPhoto()
+      ? "添付した写真の「"+pname.value.trim()+"」をモデルにしたキャラクター。写真の特徴（顔つき・目や鼻の形・耳の形・毛の色や模様・体型）をいかして、ひと目で「"+pname.value.trim()+"」とわかるようにしつつ、写真そのままではなく、下の絵柄でかわいくデフォルメしたイラストに描き直す（色は写真の毛色をもとにする）"
+      : clook.value.trim();
+    return head + "。絵柄："+getTaste().dataset.v+"。セット全体で同じキャラ・同じ絵柄になるように、毎回そろえてください。";
   }
 
   function buildOne(word, type){
@@ -338,7 +365,8 @@ moodBlock+
 
   var allText='';
   $('go').addEventListener('click', function(){
-    if(!clook.value.trim()){ clook.focus(); showToast('キャラの見た目を入れてね'); return; }
+    if(isPhoto()){ if(!pname.value.trim()){ pname.focus(); showToast('キャラの名前を入れてね'); return; } }
+    else if(!clook.value.trim()){ clook.focus(); showToast('キャラの見た目を入れてね'); return; }
     var words=serifu.value.split('\n').map(function(w){return w.trim();}).filter(Boolean);
     if(!words.length){ serifu.focus(); showToast('セリフを1行に1つ入れてね'); return; }
     if(words.length>16) words=words.slice(0,16);
@@ -354,7 +382,8 @@ moodBlock+
       cb.addEventListener('click', function(){ copy(p); }); row.appendChild(cb);
       card.appendChild(row); out.appendChild(card);
     });
-    $('rsub').textContent = words.length+'個のプロンプトができました。1つずつコピーして使ってね。';
+    $('rsub').textContent = words.length+'個のプロンプトができました。1つずつコピーして使ってね。'+
+      (isPhoto() ? '\n📷 1つ目を貼るときは、写真もいっしょにChatGPTへ送ってね。2つ目からは同じチャットに続けて貼ればOK（写真はもう送らなくて大丈夫）。' : '');
     $('topbtns').style.display='flex';
     var sp=SPEC[type];
     $('specnote').textContent='規格メモ：'+(type==='stamp'?'スタンプ':'絵文字')+' '+sp.size+'／背景透過PNG。ChatGPTの画像が白背景・サイズ違いでも、下の「03 仕上げ」で透過＆LINE規格にととのえられます。';
