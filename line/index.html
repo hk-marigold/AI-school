@@ -434,7 +434,7 @@ moodBlock+
     else if(!clook.value.trim()){ clook.focus(); showToast('キャラの見た目を入れてね'); return; }
     var words=serifu.value.split('\n').map(function(w){return w.trim();}).filter(Boolean);
     if(!words.length){ serifu.focus(); showToast('セリフを1行に1つ入れてね'); return; }
-    if(words.length>16) words=words.slice(0,16);
+    if(words.length>40){ words=words.slice(0,40); showToast("40個までにしました"); }
     var type=getType().dataset.v;
     out.innerHTML=''; allText='';
     var poses=pickPoses(words);
